@@ -74,20 +74,27 @@ exloop: if ((scheme_end - pos) > 2 && *pos == ':' && *(pos + 1) == '/' && *(pos 
     }
 
     Pos dot_pos = nullptr;
+    Pos colon_pos = nullptr;
+    bool exist_at = false;
     const auto * start_of_host = pos;
     for (; pos < end; ++pos)
     {
         switch (*pos)
         {
         case '.':
-            dot_pos = pos;
+            if (exist_at || colon_pos == nullptr)
+                dot_pos = pos;
             break;
-        case ':': /// end symbols
+        case ':':
+            if (exist_at) goto done;
+            colon_pos = colon_pos ? colon_pos : pos;
+            break;
         case '/':
         case '?':
         case '#':
-            return checkAndReturnHost(pos, dot_pos, start_of_host);
+            goto done;
         case '@': /// myemail@gmail.com
+            exist_at = true;
             start_of_host = pos + 1;
             break;
         case ' ': /// restricted symbols in whole URL
@@ -110,6 +117,9 @@ exloop: if ((scheme_end - pos) > 2 && *pos == ':' && *(pos + 1) == '/' && *(pos 
         }
     }
 
+done:
+    if (!exist_at)
+        pos = colon_pos ? colon_pos : pos;
     return checkAndReturnHost(pos, dot_pos, start_of_host);
 }
 
